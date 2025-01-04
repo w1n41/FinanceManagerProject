@@ -11,7 +11,7 @@ import kotlin.coroutines.suspendCoroutine
 
 class FireBaseRepository {
     private val firestore = FirebaseFirestore.getInstance()
-    val auth = FirebaseAuth.getInstance()
+    private val auth = FirebaseAuth.getInstance()
 
     val username = auth.currentUser?.email ?: "Can't get email"
 
@@ -47,11 +47,15 @@ class FireBaseRepository {
         } ?: emptyList()
     }
 
-    suspend fun setSpendingLimit(limit: Double) = suspendCoroutine<Unit> { continuation ->
+    suspend fun setSpendingLimit(limit: Double) = suspendCoroutine { continuation ->
         usersCollection.document(getCurrentUserId()!!)
             .set(mapOf("spendingLimit" to limit))
-            .addOnSuccessListener { continuation.resume(Unit) }
-            .addOnFailureListener { e -> continuation.resumeWithException(e) }
+            .addOnSuccessListener {
+                continuation.resume(Unit)
+            }
+            .addOnFailureListener {
+                e -> continuation.resumeWithException(e)
+            }
     }
 
     suspend fun getSpendingLimit(): Double = suspendCoroutine { continuation ->

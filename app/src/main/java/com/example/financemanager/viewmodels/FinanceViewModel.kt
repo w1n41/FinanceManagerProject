@@ -1,7 +1,5 @@
 package com.example.financemanager.viewmodels
 
-import android.util.Log
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.financemanager.data.Transaction
@@ -15,8 +13,11 @@ class FinanceViewModel : ViewModel() {
     private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
     val transactions = _transactions.asStateFlow()
 
-    private val _spendingLimit = MutableStateFlow(0.0)
-    val spendingLimit = _spendingLimit.asStateFlow()
+    private val _settingSpendingLimit = MutableStateFlow(false)
+    val settingSpendingLimit = _settingSpendingLimit.asStateFlow()
+
+    private var _spendingLimit = MutableStateFlow(0.0)
+    var spendingLimit = _spendingLimit.asStateFlow()
 
     init {
         loadTransactions()
@@ -47,6 +48,10 @@ class FinanceViewModel : ViewModel() {
                 val toast = e.message
             }
         }
+    }
+
+    fun changeSetSpendingLimitStatus(){
+        _settingSpendingLimit.value = !_settingSpendingLimit.value
     }
 
     fun setSpendingLimit(limit: Double) {

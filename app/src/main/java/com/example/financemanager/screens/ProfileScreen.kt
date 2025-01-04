@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -23,17 +24,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role.Companion.Button
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.financemanager.ui.theme.LightColorScheme
 import com.example.financemanager.viewmodels.FinanceViewModel
 import com.example.financemanager.viewmodels.FireBaseRepository
 import com.google.firebase.auth.auth
-import com.google.firebase.ktx.Firebase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +41,8 @@ fun ProfileScreen(
 ) {
     val transactions = viewModel.transactions.collectAsState()
     val firebase = FireBaseRepository()
+    val spendingLimitStatus = viewModel.settingSpendingLimit.collectAsState()
+    val spendingLimit = viewModel.spendingLimit.collectAsState()
 
     Column(
         modifier = Modifier
@@ -55,6 +55,27 @@ fun ProfileScreen(
                 IconButton(onClick = { navController.popBackStack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                 }
+            },
+            actions = {
+                Button(
+                    modifier = Modifier.height(35.dp).width(100.dp),
+                    onClick = {
+                        try {
+                            com.google.firebase.Firebase.auth.signOut()
+                            navController.navigate(Screens.LOGIN){
+                                popUpTo(navController.graph.startDestinationId){
+                                    inclusive = true
+                                }
+                            }
+                        }
+                        catch (e: Exception){
+                            Log.e("Exception", e.message.toString())
+                        }
+                    },
+                    colors = ButtonColors(Color.Red, Color.White, Color.DarkGray, Color.White)
+                ){
+                    Text("Logout")
+                }
             }
         )
 
@@ -64,38 +85,44 @@ fun ProfileScreen(
                 transactions.sumOf { it.amount }
             }
 
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center
         ) {
             Text(firebase.username)
-
         }
+
         Spacer(Modifier.height(20.dp))
-        Row (
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Button(
-                onClick = {
-                    try {
-                        com.google.firebase.Firebase.auth.signOut()
-                        navController.navigate(Screens.LOGIN){
-                            popUpTo(navController.graph.startDestinationId){
-                                inclusive = true
-                            }
-                        }
-                    }
-                    catch (e: Exception){
-                        Log.e("Exception", e.message.toString())
-                    }
-                },
-                colors = ButtonColors(Color.Red, Color.White, Color.DarkGray, Color.White)
-            ){
-                Text("Logout")
+
+        if(spendingLimit.value.toInt() != 0){
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Button(
+                    onClick = {
+                        viewModel.changeSetSpendingLimitStatus()
+                    },
+                    colors = ButtonColors(
+                        LightColorScheme.primary,
+                        LightColorScheme.onPrimary,
+                        LightColorScheme.secondary,
+                        LightColorScheme.onSecondary
+                    )
+                ) {
+                    Text(
+                        text = "Change spending limit."
+                    )
+                }
+                if (spendingLimitStatus.value){
+                    navController.navigate(Screens.SET_SPENDING_LIMIT_DIALOG)
+                }
             }
         }
-        Spacer(Modifier.height(100.dp))
+
+        Spacer(Modifier.height(12.dp))
+
         Row {
             Text("Your total: ")
         }

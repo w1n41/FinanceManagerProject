@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Face
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -47,20 +50,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.financemanager.data.Transaction
+import com.example.financemanager.ui.theme.LightColorScheme
 import com.example.financemanager.viewmodels.FinanceViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     navController: NavHostController,
-    viewModel: FinanceViewModel
+    viewModel: FinanceViewModel,
 ) {
-    val transactions = viewModel.transactions.collectAsState()
-    val spendingLimit = 200f
-
-    val totalSpent = transactions.value.sumOf { it.amount }.toFloat()
-    val spentPercentage = if (spendingLimit > 0) ((totalSpent / spendingLimit) * -1) else 0f
-
     LaunchedEffect(
         Unit
     ) {
@@ -80,18 +78,36 @@ fun DashboardScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate(Screens.ADDTRANSACTION) }
+                onClick = { navController.navigate(Screens.ADD_TRANSACTION) }
             ) {
                 Icon(Icons.Default.Add, "Add transaction")
             }
         }
     ) { padding ->
-        Column(Modifier.padding(padding)) {
-            Spacer(Modifier.height(6.dp))
+        MainContentDashboard(padding, viewModel, navController)
+    }
+}
+
+@Composable
+fun MainContentDashboard(modifier: PaddingValues, viewModel: FinanceViewModel, navController: NavHostController) {
+
+    val transactions = viewModel.transactions.collectAsState()
+    val spendingLimit = viewModel.spendingLimit.collectAsState()
+    val spendingLimitStatus = viewModel.settingSpendingLimit.collectAsState()
+
+    val totalSpent = transactions.value
+        .filter { it.amount < 0 }
+        .sumOf { it.amount }
+        .toFloat()
+    val spentPercentage = if (spendingLimit.value > 0) ((totalSpent / spendingLimit.value) * -1) else 0f
+
+    Column(Modifier.padding(modifier)) {
+        Spacer(Modifier.height(6.dp))
+        if (spendingLimit.value.toFloat() != 0f) {
             CircularProgressBar(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
-                percentage = spentPercentage,
-                int = spendingLimit.toInt()
+                percentage = spentPercentage.toFloat(),
+                int = spendingLimit.value.toInt()
             )
             Spacer(Modifier.height(10.dp))
             LazyColumn(Modifier.fillMaxSize()) {
@@ -99,8 +115,37 @@ fun DashboardScreen(
                     TransactionItem(transaction)
                 }
             }
-            Log.d("Transactions", transactions.value.toString())
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Button(
+                    onClick = {
+                        viewModel.changeSetSpendingLimitStatus()
+                    },
+                    colors = ButtonColors(
+                        LightColorScheme.primary,
+                        LightColorScheme.onPrimary,
+                        LightColorScheme.secondary,
+                        LightColorScheme.onSecondary
+                    )
+                ) {
+                    Text(
+                        text = "Set spending limit."
+                    )
+                }
+                if (spendingLimitStatus.value){
+                    navController.navigate(Screens.SET_SPENDING_LIMIT_DIALOG)
+                }
+            }
+            LazyColumn(Modifier.fillMaxSize()) {
+                items(transactions.value) { transaction ->
+                    TransactionItem(transaction)
+                }
+            }
         }
+        Log.d("Transactions", transactions.value.toString())
     }
 }
 
@@ -181,7 +226,7 @@ fun CircularProgressBar(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "You have left: ",
+                text = "Limit: ",
                 color = Color.Black,
                 fontSize = fontSize,
                 fontWeight = FontWeight.Bold
